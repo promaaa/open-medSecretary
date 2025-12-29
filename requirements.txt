@@ -1,0 +1,34 @@
+# ==============================================================================
+# Secrétariat Médical Vocal Souverain - Dependencies
+# 100% On-Premise Medical Voice Assistant
+# ==============================================================================
+
+# Pipecat Framework with local AI plugins
+pipecat-ai[silero,whisper]>=0.0.99
+
+# HTTP client for Piper TTS
+aiohttp>=3.9.0
+
+# Ollama Python client (optional, can use direct HTTP)
+ollama>=0.4.0
+
+# Audio processing & resampling
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Utilities
+python-dotenv>=1.0.0
+loguru>=0.7.0
+
+# ==============================================================================
+# NOTES:
+# - faster-whisper is included via pipecat-ai[whisper]
+# - silero-vad is included via pipecat-ai[silero]
+# - torch/torchaudio will be installed as dependencies
+#
+# For GPU acceleration on Mac:
+#   pip install mlx mlx-whisper  (for Apple Silicon)
+#
+# For GPU acceleration on Linux/Windows:
+#   pip install torch --extra-index-url https://download.pytorch.org/whl/cu118
+# ==============================================================================
