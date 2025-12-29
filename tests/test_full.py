@@ -1,176 +1,258 @@
 #!/usr/bin/env python3
 """
-Full System Test - End-to-End Pipeline
+Test Complet - Pipeline End-to-End
 
-Tests the complete voice assistant pipeline with all components.
+Simple test - lance tout automatiquement, un seul terminal!
 
 Usage:
     python tests/test_full.py
-    python tests/test_full.py --audio /path/to/audio.wav
+    python tests/test_full.py --play  # Joue la réponse automatiquement
 """
 
 import argparse
-import asyncio
+import atexit
 import os
+import signal
 import subprocess
 import sys
 import time
 
-# Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Track background processes for cleanup
+_processes = []
 
-def check_service(name: str, url: str) -> bool:
-    """Check if a service is running."""
-    import urllib.request
+
+def cleanup():
+    """Kill all background processes."""
+    for p in _processes:
+        try:
+            p.terminate()
+            p.wait(timeout=2)
+        except:
+            try:
+                p.kill()
+            except:
+                pass
+
+
+atexit.register(cleanup)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
+signal.signal(signal.SIGTERM, lambda s, f: sys.exit(0))
+
+
+def check_port(port: int) -> bool:
+    """Check if a port is open."""
+    import socket
     try:
-        urllib.request.urlopen(url, timeout=2)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        sock.connect(("127.0.0.1", port))
+        sock.close()
         return True
     except:
         return False
 
 
+def wait_for_port(port: int, timeout: int = 30):
+    """Wait for a port to become available."""
+    start = time.time()
+    while time.time() - start < timeout:
+        if check_port(port):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def start_ollama():
+    """Start Ollama if not running."""
+    import urllib.request
+    try:
+        urllib.request.urlopen("http://localhost:11434/api/tags", timeout=2)
+        print("   ✅ Ollama déjà actif")
+        return True
+    except:
+        pass
+    
+    print("   ⏳ Démarrage Ollama...")
+    p = subprocess.Popen(
+        ["ollama", "serve"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    _processes.append(p)
+    time.sleep(3)
+    
+    try:
+        urllib.request.urlopen("http://localhost:11434/api/tags", timeout=5)
+        print("   ✅ Ollama démarré")
+        return True
+    except:
+        print("   ❌ Échec Ollama")
+        return False
+
+
+def start_tts():
+    """Start Coqui TTS server."""
+    if check_port(5555):
+        print("   ✅ TTS déjà actif")
+        return True
+    
+    print("   ⏳ Démarrage TTS (peut prendre 10-20s)...")
+    
+    p = subprocess.Popen(
+        [sys.executable, "coqui_server.py"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    _processes.append(p)
+    
+    if wait_for_port(5555, timeout=30):
+        print("   ✅ TTS démarré")
+        return True
+    else:
+        print("   ❌ Échec TTS")
+        return False
+
+
+def start_main():
+    """Start main voice assistant."""
+    if check_port(9001):
+        print("   ✅ Assistant déjà actif")
+        return True
+    
+    print("   ⏳ Démarrage assistant...")
+    
+    p = subprocess.Popen(
+        [sys.executable, "main.py"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    _processes.append(p)
+    
+    if wait_for_port(9001, timeout=15):
+        print("   ✅ Assistant démarré")
+        return True
+    else:
+        print("   ❌ Échec assistant")
+        return False
+
+
 def create_test_audio():
-    """Create a test audio file with speech."""
+    """Create test audio with TTS."""
     from TTS.api import TTS
     import numpy as np
     import wave
     from scipy import signal
     
-    print("🎤 Creating test audio...")
+    print("\n⏳ Création audio de test...")
     tts = TTS('tts_models/fr/css10/vits')
-    wav = tts.tts("Bonjour, je voudrais prendre un rendez-vous pour demain matin s'il vous plaît.")
+    wav = tts.tts("Bonjour, je voudrais prendre un rendez-vous pour demain matin.")
     
-    # Convert to 8kHz (Asterisk format)
     audio_int16 = (np.array(wav) * 32767).astype(np.int16)
     resampled = signal.resample(audio_int16, int(len(audio_int16) * 8000 / 22050))
     resampled_int16 = resampled.astype(np.int16)
     
-    audio_path = "/tmp/test_full_speech.wav"
+    audio_path = "/tmp/test_speech.wav"
     with wave.open(audio_path, 'wb') as f:
         f.setnchannels(1)
         f.setsampwidth(2)
         f.setframerate(8000)
         f.writeframes(resampled_int16.tobytes())
     
-    print(f"✅ Created: {audio_path}")
+    print(f"✅ Audio créé: {audio_path}")
     return audio_path
 
 
-async def test_full_pipeline(audio_path: str = None):
-    """Test the full voice assistant pipeline."""
+def test_full(play: bool = False):
+    """Run complete end-to-end test."""
     
     print(f"\n{'='*60}")
-    print(f"🚀 Full System Test")
-    print(f"{'='*60}\n")
+    print(f"🚀 Test Complet - Pipeline E2E")
+    print(f"{'='*60}")
+    print(f"Ce test lance automatiquement tous les services.")
+    print()
     
-    # Check prerequisites
-    print("📋 Checking prerequisites...\n")
+    # Start all services
+    print("📋 Démarrage des services...\n")
     
-    services = [
-        ("Ollama", "http://localhost:11434/api/tags"),
-        ("Coqui TTS", "http://localhost:5555/health"),
-    ]
-    
-    missing = []
-    for name, url in services:
-        if check_service(name, url):
-            print(f"   ✅ {name} is running")
-        else:
-            print(f"   ❌ {name} is NOT running")
-            missing.append(name)
-    
-    if missing:
-        print(f"\n⚠️ Missing services: {', '.join(missing)}")
-        print("\nStart them with:")
-        if "Ollama" in missing:
-            print("   ollama run llama3:8b")
-        if "Coqui TTS" in missing:
-            print("   python coqui_server.py")
+    if not start_ollama():
         return False
     
-    # Create test audio if needed
-    if not audio_path:
-        audio_path = create_test_audio()
-    
-    # Start main.py in background
-    print("\n🚀 Starting voice assistant...")
-    main_process = subprocess.Popen(
-        ["python", "main.py"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
-    
-    # Wait for server to start
-    await asyncio.sleep(5)
-    
-    # Check if AudioSocket is ready
-    import socket
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
-        sock.connect(("127.0.0.1", 9001))
-        sock.close()
-        print("   ✅ AudioSocket server ready on port 9001")
-    except:
-        print("   ❌ AudioSocket server failed to start")
-        main_process.terminate()
+    if not start_tts():
         return False
+    
+    if not start_main():
+        return False
+    
+    # Create test audio
+    audio_path = create_test_audio()
     
     # Run test client
-    print("\n📞 Running test call...")
+    print("\n📞 Exécution du test...")
     start_time = time.time()
     
     result = subprocess.run(
-        ["python", "tests/mock_audiosocket_client.py", "--audio-file", audio_path],
+        [sys.executable, "tests/mock_audiosocket_client.py", "--audio-file", audio_path],
         capture_output=True,
         text=True,
         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        timeout=60
+        timeout=90
     )
     
     total_time = time.time() - start_time
-    
-    # Stop main.py
-    main_process.terminate()
-    main_process.wait()
-    
-    # Parse results
     output = result.stdout + result.stderr
     
-    # Check for success indicators
+    # Parse results
     connected = "Connected!" in output
-    audio_received = "Received" in output and "bytes of audio" in output
-    saved = "Saved" in output and "bytes to response.wav" in output
+    received = "Received" in output and "bytes of audio" in output
+    saved = "Saved" in output
+    
+    # Get response size
+    response_size = 0
+    if saved:
+        for line in output.split("\n"):
+            if "Saved" in line and "bytes" in line:
+                try:
+                    response_size = int(line.split()[1])
+                except:
+                    pass
     
     print(f"\n{'='*60}")
-    print(f"📊 Test Results")
+    print(f"📊 Résultats:")
     print(f"{'='*60}")
-    print(f"   Connection: {'✅ Success' if connected else '❌ Failed'}")
-    print(f"   Audio Received: {'✅ Yes' if audio_received else '❌ No'}")
-    print(f"   Response Saved: {'✅ Yes' if saved else '❌ No'}")
-    print(f"   Total Time: {total_time:.2f}s")
+    print(f"   Connexion: {'✅' if connected else '❌'}")
+    print(f"   Audio reçu: {'✅' if received else '❌'}")
+    print(f"   Réponse: {response_size} bytes")
+    print(f"   Temps total: {total_time:.1f}s")
     print(f"{'='*60}")
     
-    if saved:
-        response_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "response.wav"
-        )
-        print(f"\n🎧 Listen to response: afplay {response_path}")
+    response_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "response.wav"
+    )
     
-    return connected and audio_received
+    if os.path.exists(response_path):
+        if play:
+            print(f"\n🎧 Lecture de la réponse...")
+            subprocess.run(["afplay", response_path])
+        else:
+            print(f"\n🎧 Pour écouter: afplay {response_path}")
+    
+    success = connected and received and response_size > 0
+    print(f"\n{'✅ TEST RÉUSSI!' if success else '❌ TEST ÉCHOUÉ'}")
+    
+    return success
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Full system test")
-    parser.add_argument("--audio", default=None,
-                       help="Path to audio file to use")
-    
+    parser = argparse.ArgumentParser(description="Test complet E2E")
+    parser.add_argument("--play", action="store_true", help="Joue la réponse automatiquement")
     args = parser.parse_args()
     
-    success = asyncio.run(test_full_pipeline(audio_path=args.audio))
+    success = test_full(play=args.play)
     sys.exit(0 if success else 1)
 
 
