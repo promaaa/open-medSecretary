@@ -85,7 +85,13 @@ def cleanup():
                 pass
 
 atexit.register(cleanup)
-signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
+
+def signal_handler(sig, frame):
+    state.running = False
+    cleanup()
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def check_port(port: int) -> bool:
