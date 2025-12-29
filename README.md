@@ -1,90 +1,99 @@
 # Open Medical Secretary
 
-100% On-Premise AI voice assistant for medical offices, built with [Pipecat](https://github.com/pipecat-ai/pipecat).
+🩺 **100% On-Premise AI Voice Assistant for Medical Offices**
+
+Built with [Pipecat](https://github.com/pipecat-ai/pipecat) - zero cloud dependencies, all patient data stays local.
+
+## Features
+
+- 🎙️ **Speech Recognition**: Whisper (faster-whisper, French)
+- 🧠 **AI Response**: Ollama (llama3:8b, local)
+- 🔊 **Voice Synthesis**: Coqui TTS (VITS French model, natural voice)
+- 📞 **Telephony**: Asterisk AudioSocket integration
+- 🔒 **Privacy**: No data sent to cloud
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Medical Office                           │
-│  ┌─────────────┐                                                │
-│  │  Telephone  │◄────────► Asterisk PBX                         │
-│  └─────────────┘              │                                 │
-│                               │ AudioSocket (TCP:9001)          │
-│                               ▼                                 │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                    Voice Assistant                          ││
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        ││
-│  │  │ Whisper │  │ Ollama  │  │  Piper  │  │ Silero  │        ││
-│  │  │  (STT)  │  │  (LLM)  │  │  (TTS)  │  │  (VAD)  │        ││
-│  │  └─────────┘  └─────────┘  └─────────┘  └─────────┘        ││
-│  │                    Pipecat Pipeline                         ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
-              100% Local - No data sent to cloud
+Asterisk PBX ←→ AudioSocket (TCP:9001) ←→ Pipecat Pipeline
+                                              ↓
+                          [STT] → [LLM] → [TTS]
+                        Whisper  Ollama   Coqui
 ```
 
-## Prerequisites
+## Quick Start
 
-- Python 3.10+
-- NVIDIA GPU (recommended) or Apple Silicon
-- Ollama installed and configured
-- Piper TTS server
-
-## Installation
+### 1. Install Dependencies
 
 ```bash
-# 1. Clone and install dependencies
 cd medical_voice_assistant
+python3.11 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+pip install TTS  # Coqui TTS
+```
 
-# 2. Start Ollama with a model
+### 2. Start Ollama
+
+```bash
 ollama run llama3:8b
+```
 
-# 3. Start Piper TTS (Docker)
-docker run -p 5000:5000 rhasspy/piper-tts-server:latest --voice en_US-lessac-medium
+### 3. Start TTS Server
 
-# 4. Configure environment
-cp .env.example .env
-# Edit .env as needed
+```bash
+python coqui_server.py
+```
 
-# 5. Run the assistant
+### 4. Start Voice Assistant
+
+```bash
 python main.py
 ```
 
-## Asterisk Configuration
+### 5. Test
 
-In `extensions.conf`:
+```bash
+python tests/mock_audiosocket_client.py
+afplay response.wav  # Listen to greeting
+```
+
+## Configuration
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# STT
+WHISPER_MODEL=small
+WHISPER_LANGUAGE=FR
+
+# LLM
+OLLAMA_MODEL=llama3:8b
+
+# TTS  
+TTS_MODEL=tts_models/fr/css10/vits
+```
+
+## Asterisk Integration
+
+Add to `extensions.conf`:
 
 ```ini
-[from-internal]
+[medical-secretary]
 exten => 1000,1,Answer()
 same => n,AudioSocket(127.0.0.1:9001,${CHANNEL(uniqueid)})
 same => n,Hangup()
 ```
 
-## Testing Without Asterisk
-
-```bash
-python tests/mock_audiosocket_client.py
-```
-
 ## Project Structure
 
 ```
-medical_voice_assistant/
-├── main.py                     # Main entry point
-├── requirements.txt            # Python dependencies
-├── .env.example               # Example configuration
-├── transports/
-│   └── audiosocket/
-│       └── transport.py       # Custom AudioSocket transport
-├── services/
-│   └── medical_llm.py         # Medical LLM service
-├── config/
-│   └── system_prompts.py      # System prompts
-└── tests/
-    └── mock_audiosocket_client.py  # Test client
+├── main.py              # Pipeline orchestration
+├── coqui_server.py      # Coqui TTS HTTP server
+├── transports/          # AudioSocket transport
+├── services/            # Medical LLM service
+├── config/              # System prompts (French)
+└── tests/               # Mock AudioSocket client
 ```
 
 ## License
