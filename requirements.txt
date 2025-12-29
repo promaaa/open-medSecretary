@@ -8,6 +8,7 @@ pipecat-ai[silero,whisper]
 
 # HTTP client for Piper TTS
 aiohttp>=3.9.0
+websockets>=12.0
 
 # Ollama Python client (optional, can use direct HTTP)
 ollama>=0.4.0
