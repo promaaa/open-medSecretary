@@ -40,12 +40,14 @@ def get_ovh_config():
     
     username = input("Identifiant SIP (ex: 0033XXXXXXXXX): ").strip()
     password = input("Mot de passe SIP: ").strip()
+    doctor_phone = input("Numéro portable du médecin (urgences, ex: 0612345678): ").strip()
     
     return {
         "SIP_SERVER": "siptrunk.ovh.net",
         "SIP_PORT": "5060",
         "SIP_USERNAME": username,
         "SIP_PASSWORD": password,
+        "DOCTOR_PHONE_NUMBER": doctor_phone,
     }
 
 
@@ -63,12 +65,14 @@ def get_twilio_config():
     server = input("Serveur SIP (ex: xxxxx.pstn.twilio.com): ").strip()
     username = input("Username: ").strip()
     password = input("Password: ").strip()
+    doctor_phone = input("Numéro portable du médecin (urgences, ex: +33612345678): ").strip()
     
     return {
         "SIP_SERVER": server,
         "SIP_PORT": "5060",
         "SIP_USERNAME": username,
         "SIP_PASSWORD": password,
+        "DOCTOR_PHONE_NUMBER": doctor_phone,
     }
 
 
@@ -81,12 +85,14 @@ def get_free_config():
     
     username = input("Identifiant SIP: ").strip()
     password = input("Mot de passe SIP: ").strip()
+    doctor_phone = input("Numéro portable du médecin (urgences, ex: 0612345678): ").strip()
     
     return {
         "SIP_SERVER": "freephonie.net",
         "SIP_PORT": "5060",
         "SIP_USERNAME": username,
         "SIP_PASSWORD": password,
+        "DOCTOR_PHONE_NUMBER": doctor_phone,
     }
 
 
@@ -99,12 +105,14 @@ def get_custom_config():
     port = input("Port SIP [5060]: ").strip() or "5060"
     username = input("Identifiant SIP: ").strip()
     password = input("Mot de passe SIP: ").strip()
+    doctor_phone = input("Numéro portable du médecin (urgences): ").strip()
     
     return {
         "SIP_SERVER": server,
         "SIP_PORT": port,
         "SIP_USERNAME": username,
         "SIP_PASSWORD": password,
+        "DOCTOR_PHONE_NUMBER": doctor_phone,
     }
 
 

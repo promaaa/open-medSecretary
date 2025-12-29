@@ -23,6 +23,8 @@ services:
       - SIP_PORT=${SIP_PORT:-5060}
       - SIP_USERNAME=${SIP_USERNAME}
       - SIP_PASSWORD=${SIP_PASSWORD}
+      # === DOCTOR PHONE (for emergencies) ===
+      - DOCTOR_PHONE_NUMBER=${DOCTOR_PHONE_NUMBER}
       # === AI ASSISTANT CONNECTION ===
       - AUDIOSOCKET_HOST=host.docker.internal
       - AUDIOSOCKET_PORT=9001
