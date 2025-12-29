@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - Open Medical Secretary</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🏥</span>
+                <h1>Open Medical Secretary</h1>
+            </div>
+            <nav class="nav">
+                <a href="/" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/calls" class="nav-item">
+                    <i data-lucide="phone-incoming"></i>
+                    <span>Historique</span>
+                </a>
+                <a href="/settings" class="nav-item active">
+                    <i data-lucide="settings"></i>
+                    <span>Configuration</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <header class="header">
+                <h2>Configuration</h2>
+            </header>
+
+            <!-- Telephony Config -->
+            <div class="card">
+                <h3><i data-lucide="phone"></i> Téléphonie</h3>
+                <form onsubmit="saveConfig(event)">
+                    <div class="form-group">
+                        <label>Opérateur SIP</label>
+                        <select name="provider" id="provider">
+                            <option value="ovh">OVH Télécom</option>
+                            <option value="twilio">Twilio</option>
+                            <option value="free">Free SIP (Freebox)</option>
+                            <option value="custom">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Serveur SIP</label>
+                        <input type="text" name="sip_server" id="sip_server" placeholder="siptrunk.ovh.net">
+                    </div>
+                    <div class="form-group">
+                        <label>Identifiant SIP</label>
+                        <input type="text" name="sip_username" id="sip_username" placeholder="0033XXXXXXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe SIP</label>
+                        <input type="password" name="sip_password" id="sip_password">
+                    </div>
+                    <div class="form-group">
+                        <label>Téléphone du médecin (urgences)</label>
+                        <input type="text" name="doctor_phone" id="doctor_phone" placeholder="06 12 34 56 78">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save"></i>
+                        Sauvegarder
+                    </button>
+                </form>
+            </div>
+
+            <!-- IVR Menu -->
+            <div class="card">
+                <h3><i data-lucide="list"></i> Menu Vocal (IVR)</h3>
+                <div class="ivr-item">
+                    <span class="ivr-number blue">1</span>
+                    <div>
+                        <strong>Gestion des rendez-vous</strong>
+                        <p style="color: var(--text-muted); font-size: 0.875rem;">→ Assistant IA</p>
+                    </div>
+                </div>
+                <div class="ivr-item">
+                    <span class="ivr-number red">2</span>
+                    <div>
+                        <strong>Urgence médicale</strong>
+                        <p style="color: var(--text-muted); font-size: 0.875rem;">→ Transfert au médecin</p>
+                    </div>
+                </div>
+                <div class="ivr-item">
+                    <span class="ivr-number green">3</span>
+                    <div>
+                        <strong>Autre demande</strong>
+                        <p style="color: var(--text-muted); font-size: 0.875rem;">→ Assistant IA</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Model -->
+            <div class="card">
+                <h3><i data-lucide="brain"></i> Modèle IA</h3>
+                <div class="form-group">
+                    <label>Modèle Ollama</label>
+                    <select name="ollama_model" id="ollama_model">
+                        <option value="llama3.2:3b">Llama 3.2 3B (Recommandé)</option>
+                        <option value="llama3.1:8b">Llama 3.1 8B (Plus puissant)</option>
+                        <option value="mistral:7b">Mistral 7B</option>
+                    </select>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Load existing config
+        fetch('/api/config')
+            .then(r => r.json())
+            .then(config => {
+                if (config.SIP_SERVER) document.getElementById('sip_server').value = config.SIP_SERVER;
+                if (config.SIP_USERNAME) document.getElementById('sip_username').value = config.SIP_USERNAME;
+                if (config.DOCTOR_PHONE_NUMBER) document.getElementById('doctor_phone').value = config.DOCTOR_PHONE_NUMBER;
+            });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique - Open Medical Secretary</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🏥</span>
+                <h1>Open Medical Secretary</h1>
+            </div>
+            <nav class="nav">
+                <a href="/" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/calls" class="nav-item active">
+                    <i data-lucide="phone-incoming"></i>
+                    <span>Historique</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <i data-lucide="settings"></i>
+                    <span>Configuration</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <header class="header">
+                <h2>Historique des appels</h2>
+            </header>
+
+            <div class="card">
+                <div id="calls-list">
+                    <p style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        <i data-lucide="phone-off"
+                            style="width: 48px; height: 48px; display: block; margin: 0 auto 1rem;"></i>
+                        Aucun appel enregistré pour le moment
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Load calls
+        fetch('/api/calls')
+            .then(r => r.json())
+            .then(calls => {
+                if (calls.length > 0) {
+                    const list = document.getElementById('calls-list');
+                    list.innerHTML = calls.map(call => `
+                        <div style="display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border);">
+                            <div style="flex: 1;">
+                                <strong>${call.caller}</strong>
+                                <span style="color: var(--text-muted); margin-left: 1rem;">${call.timestamp}</span>
+                                <p style="color: var(--text-muted); font-size: 0.875rem;">${call.summary || ''}</p>
+                            </div>
+                            <span style="padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; background: ${call.status === 'completed' ? '#dcfce7' : '#fee2e2'}; color: ${call.status === 'completed' ? '#16a34a' : '#dc2626'};">
+                                ${call.status === 'completed' ? 'Terminé' : 'Manqué'}
+                            </span>
+                        </div>
+                    `).join('');
+                }
+            });
+    </script>
+</body>
+
+</html>

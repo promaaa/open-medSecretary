@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Medical Secretary</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🏥</span>
+                <h1>Open Medical Secretary</h1>
+            </div>
+            <nav class="nav">
+                <a href="/" class="nav-item active">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/calls" class="nav-item">
+                    <i data-lucide="phone-incoming"></i>
+                    <span>Historique</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <i data-lucide="settings"></i>
+                    <span>Configuration</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-badge" id="connection-status">
+                    <span class="status-dot"></span>
+                    <span>Connexion...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <header class="header">
+                <h2>Tableau de bord</h2>
+                <div class="header-actions">
+                    <button class="btn btn-outline" id="test-btn">
+                        <i data-lucide="flask-conical"></i>
+                        Test
+                    </button>
+                    <button class="btn btn-primary" id="start-btn">
+                        <i data-lucide="play"></i>
+                        Démarrer
+                    </button>
+                </div>
+            </header>
+
+            <!-- Services Grid -->
+            <section class="services-grid">
+                <div class="service-card" id="service-ollama">
+                    <div class="service-header">
+                        <i data-lucide="brain"></i>
+                        <span class="service-status" id="status-ollama">⏳</span>
+                    </div>
+                    <h3>Ollama LLM</h3>
+                    <p>Port 11434</p>
+                </div>
+                <div class="service-card" id="service-tts">
+                    <div class="service-header">
+                        <i data-lucide="volume-2"></i>
+                        <span class="service-status" id="status-tts">⏳</span>
+                    </div>
+                    <h3>Coqui TTS</h3>
+                    <p>Port 5555</p>
+                </div>
+                <div class="service-card" id="service-assistant">
+                    <div class="service-header">
+                        <i data-lucide="mic"></i>
+                        <span class="service-status" id="status-assistant">⏳</span>
+                    </div>
+                    <h3>Assistant IA</h3>
+                    <p>Port 9001</p>
+                </div>
+                <div class="service-card" id="service-asterisk">
+                    <div class="service-header">
+                        <i data-lucide="phone"></i>
+                        <span class="service-status" id="status-asterisk">⏳</span>
+                    </div>
+                    <h3>Asterisk PBX</h3>
+                    <p>Port 5060</p>
+                </div>
+            </section>
+
+            <!-- Stats -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i data-lucide="phone-incoming"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-calls">0</span>
+                        <span class="stat-label">Appels reçus</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i data-lucide="mic"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-transcriptions">0</span>
+                        <span class="stat-label">Transcriptions</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i data-lucide="message-square"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-responses">0</span>
+                        <span class="stat-label">Réponses</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <i data-lucide="alert-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-errors">0</span>
+                        <span class="stat-label">Erreurs</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How it works -->
+            <section class="info-box">
+                <h3>💡 Comment ça fonctionne</h3>
+                <ul>
+                    <li>Les patients appellent votre numéro de cabinet</li>
+                    <li>Le menu vocal leur propose des options (RDV, urgence, autre)</li>
+                    <li>L'assistant IA gère les prises de rendez-vous automatiquement</li>
+                    <li>Les urgences sont transférées directement sur votre mobile</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
