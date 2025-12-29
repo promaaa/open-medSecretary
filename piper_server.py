@@ -28,7 +28,7 @@ except ImportError:
     raise
 
 # Default voice - will be downloaded automatically
-DEFAULT_VOICE = os.getenv("PIPER_VOICE", "en_US-lessac-medium")
+DEFAULT_VOICE = os.getenv("PIPER_VOICE", "fr_FR-siwis-medium")
 VOICES_DIR = Path.home() / ".local" / "share" / "piper_voices"
 
 

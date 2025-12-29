@@ -84,7 +84,7 @@ AUDIOSOCKET_PORT = int(os.getenv("AUDIOSOCKET_PORT", "9001"))
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
 WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "auto")  # cpu, cuda, auto
 WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "default")
-WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "EN")  # EN, FR, DE, etc.
+WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "FR")  # EN, FR, DE, etc.
 
 # Ollama LLM settings
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:8b")
