@@ -1,14 +1,14 @@
-# Secrétariat Médical Vocal Souverain
+# Open Medical Secretary
 
-Agent vocal IA 100% On-Premise pour cabinets médicaux, utilisant [Pipecat](https://github.com/pipecat-ai/pipecat).
+100% On-Premise AI voice assistant for medical offices, built with [Pipecat](https://github.com/pipecat-ai/pipecat).
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Cabinet Médical                          │
+│                         Medical Office                           │
 │  ┌─────────────┐                                                │
-│  │  Téléphone  │◄────────► Asterisk PBX                         │
+│  │  Telephone  │◄────────► Asterisk PBX                         │
 │  └─────────────┘              │                                 │
 │                               │ AudioSocket (TCP:9001)          │
 │                               ▼                                 │
@@ -21,40 +21,40 @@ Agent vocal IA 100% On-Premise pour cabinets médicaux, utilisant [Pipecat](http
 │  │                    Pipecat Pipeline                         ││
 │  └─────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
-              100% Local - Aucune donnée vers le cloud
+              100% Local - No data sent to cloud
 ```
 
-## Prérequis
+## Prerequisites
 
 - Python 3.10+
-- GPU NVIDIA (recommandé) ou Apple Silicon
-- Ollama installé et configuré
-- Serveur Piper TTS
+- NVIDIA GPU (recommended) or Apple Silicon
+- Ollama installed and configured
+- Piper TTS server
 
 ## Installation
 
 ```bash
-# 1. Cloner et installer les dépendances
+# 1. Clone and install dependencies
 cd medical_voice_assistant
 pip install -r requirements.txt
 
-# 2. Démarrer Ollama avec un modèle
+# 2. Start Ollama with a model
 ollama run llama3:8b
 
-# 3. Démarrer Piper TTS (Docker)
-docker run -p 5000:5000 rhasspy/piper-tts-server:latest --voice fr_FR-siwis-medium
+# 3. Start Piper TTS (Docker)
+docker run -p 5000:5000 rhasspy/piper-tts-server:latest --voice en_US-lessac-medium
 
-# 4. Configurer l'environnement
+# 4. Configure environment
 cp .env.example .env
-# Éditer .env selon vos besoins
+# Edit .env as needed
 
-# 5. Lancer l'assistant
+# 5. Run the assistant
 python main.py
 ```
 
-## Configuration Asterisk
+## Asterisk Configuration
 
-Dans `extensions.conf`:
+In `extensions.conf`:
 
 ```ini
 [from-internal]
@@ -63,30 +63,30 @@ same => n,AudioSocket(127.0.0.1:9001,${CHANNEL(uniqueid)})
 same => n,Hangup()
 ```
 
-## Test sans Asterisk
+## Testing Without Asterisk
 
 ```bash
 python tests/mock_audiosocket_client.py
 ```
 
-## Structure du Projet
+## Project Structure
 
 ```
 medical_voice_assistant/
-├── main.py                     # Point d'entrée principal
-├── requirements.txt            # Dépendances Python
-├── .env.example               # Configuration exemple
+├── main.py                     # Main entry point
+├── requirements.txt            # Python dependencies
+├── .env.example               # Example configuration
 ├── transports/
 │   └── audiosocket/
-│       └── transport.py       # Transport AudioSocket custom
+│       └── transport.py       # Custom AudioSocket transport
 ├── services/
-│   └── medical_llm.py         # Service LLM médical
+│   └── medical_llm.py         # Medical LLM service
 ├── config/
-│   └── system_prompts.py      # Prompts système
+│   └── system_prompts.py      # System prompts
 └── tests/
-    └── mock_audiosocket_client.py  # Client de test
+    └── mock_audiosocket_client.py  # Test client
 ```
 
-## Licence
+## License
 
 BSD 2-Clause License

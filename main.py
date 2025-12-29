@@ -6,8 +6,8 @@
 #
 
 """
-Secrétariat Médical Vocal Souverain
-====================================
+Open Medical Secretary
+======================
 
 100% On-Premise medical voice assistant using Pipecat.
 
@@ -23,7 +23,7 @@ Usage:
        ollama run llama3:8b
 
     2. Start Piper TTS server:
-       docker run -p 5000:5000 rhasspy/piper-tts-server --voice fr_FR-siwis-medium
+       docker run -p 5000:5000 rhasspy/piper-tts-server --voice en_US-lessac-medium
 
     3. Run this application:
        python main.py
@@ -84,6 +84,7 @@ AUDIOSOCKET_PORT = int(os.getenv("AUDIOSOCKET_PORT", "9001"))
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
 WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "auto")  # cpu, cuda, auto
 WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "default")
+WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "EN")  # EN, FR, DE, etc.
 
 # Ollama LLM settings
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:8b")
@@ -102,8 +103,8 @@ async def main():
     """Run the medical voice assistant pipeline."""
 
     logger.info("=" * 60)
-    logger.info("Secrétariat Médical Vocal Souverain")
-    logger.info("100% On-Premise - Aucune donnée vers le cloud")
+    logger.info("Open Medical Secretary")
+    logger.info("100% On-Premise - No data sent to cloud")
     logger.info("=" * 60)
 
     # Create aiohttp session for Piper TTS
@@ -131,11 +132,15 @@ async def main():
         # -----------------------------------------------------------------
         # 2. STT - Whisper (local, faster-whisper)
         # -----------------------------------------------------------------
+        # Map language string to Language enum
+        language_map = {"EN": Language.EN, "FR": Language.FR, "DE": Language.DE, "ES": Language.ES}
+        whisper_language = language_map.get(WHISPER_LANGUAGE.upper(), Language.EN)
+
         stt = WhisperSTTService(
             model=WHISPER_MODEL,
             device=WHISPER_DEVICE,
             compute_type=WHISPER_COMPUTE_TYPE,
-            language=Language.FR,  # French
+            language=whisper_language,
             no_speech_prob=0.4,
         )
 
@@ -222,8 +227,8 @@ async def main():
         runner = PipelineRunner()
 
         logger.info("=" * 60)
-        logger.info("Prêt à recevoir des appels!")
-        logger.info("Configurez Asterisk pour pointer vers ce serveur.")
+        logger.info("Ready to receive calls!")
+        logger.info("Configure Asterisk to point to this server.")
         logger.info("=" * 60)
 
         await runner.run(task)
@@ -233,7 +238,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Arrêt du serveur...")
+        logger.info("Stopping server...")
     except Exception as e:
-        logger.error(f"Erreur: {e}")
+        logger.error(f"Error: {e}")
         sys.exit(1)
