@@ -1,0 +1,53 @@
+# =============================================================================
+# Open Medical Secretary - Complete Stack
+# =============================================================================
+# One command to run everything: docker-compose up
+# =============================================================================
+
+services:
+  # -------------------------------------------------------------------------
+  # Asterisk PBX - Receives phone calls
+  # -------------------------------------------------------------------------
+  asterisk:
+    build: ./asterisk
+    container_name: open-med-asterisk
+    restart: unless-stopped
+    ports:
+      - "5060:5060/udp"    # SIP signaling
+      - "5060:5060/tcp"    # SIP signaling (TCP)
+      - "10000-10100:10000-10100/udp"  # RTP audio
+    environment:
+      # === SIP TRUNK CONFIGURATION ===
+      # Get these from your SIP provider (OVH, Twilio, etc.)
+      - SIP_SERVER=${SIP_SERVER:-siptrunk.ovh.net}
+      - SIP_PORT=${SIP_PORT:-5060}
+      - SIP_USERNAME=${SIP_USERNAME}
+      - SIP_PASSWORD=${SIP_PASSWORD}
+      # === AI ASSISTANT CONNECTION ===
+      - AUDIOSOCKET_HOST=host.docker.internal
+      - AUDIOSOCKET_PORT=9001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - medical-net
+
+  # -------------------------------------------------------------------------
+  # Ollama LLM - Language Model (optional, can use host)
+  # -------------------------------------------------------------------------
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: open-med-ollama
+  #   restart: unless-stopped
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #   networks:
+  #     - medical-net
+
+networks:
+  medical-net:
+    driver: bridge
+
+# volumes:
+#   ollama-data:
