@@ -1,97 +1,97 @@
 # 🏥 Open Medical Secretary
 
-**Assistant vocal IA pour cabinets médicaux**
+**AI voice assistant for medical practices**
 
-Secrétaire téléphonique automatique qui gère les appels, prises de rendez-vous et urgences - 100% local, sans cloud.
+Automatic call assistant that handles inbound calls, scheduling, and emergencies — 100% local with no cloud dependency.
 
 ---
 
-## ⚡ Installation rapide
+## ⚡ Quick install
 
 ```bash
-# Cloner le projet
+# Clone the project
 git clone https://github.com/promaaa/open-medSecretary.git
 cd open-medical-secretary
 
-# Installer (une seule commande)
+# Install (single command)
 ./install.sh
 
-# Lancer
+# Start
 ./start.py
 ```
 
-L'interface web s'ouvre automatiquement sur `http://localhost:3000`
+The web dashboard opens automatically at `http://localhost:3000`.
 
 ---
 
-## 🎯 Fonctionnalités
+## 🎯 Features
 
-- **📞 Menu vocal IVR** : Options pour RDV, urgences, autres demandes
-- **🤖 Assistant IA** : Répond aux patients, prend les RDV
-- **🔊 Synthèse vocale** : Voix naturelle en français (Coqui TTS)
-- **🧠 100% Local** : Pas de données envoyées au cloud (Ollama + Whisper)
-- **📊 Dashboard** : Interface web pour surveiller et configurer
+- **📞 IVR voice menu**: Options for appointments, emergencies, and other requests
+- **🤖 AI assistant**: Answers callers and schedules appointments
+- **🔊 Text-to-speech**: Natural French voice (Coqui TTS)
+- **🧠 100% local**: No data sent to the cloud (Ollama + Whisper)
+- **📊 Dashboard**: Web UI for monitoring and configuration
 
 ---
 
-## 📋 Menu vocal
+## 📋 Voice menu
 
-Quand un patient appelle :
+When a patient calls:
 
-| Touche | Action |
-|--------|--------|
-| **1** | Gestion des RDV → Assistant IA |
-| **2** | Urgence → Transfert au médecin |
-| **3** | Autre demande → Assistant IA |
-| **\*** | Répéter le menu |
+| Key | Action |
+|-----|--------|
+| **1** | Appointment handling → AI assistant |
+| **2** | Emergency → Transfer to doctor |
+| **3** | Other request → AI assistant |
+| **\*** | Repeat the menu |
 
 ---
 
 ## 🔧 Configuration
 
-### Première utilisation
+### First run
 
-1. Lancez `./start.py`
-2. Allez dans **Configuration** depuis le dashboard
-3. Entrez vos identifiants SIP (OVH, Twilio, Free...)
-4. Entrez le numéro du médecin pour les urgences
+1. Run `./start.py`
+2. Open **Configuration** in the dashboard
+3. Enter your SIP credentials (OVH, Twilio, Free, etc.)
+4. Enter the doctor’s number for emergencies
 
-### Opérateurs SIP supportés
+### Supported SIP providers
 
-- **OVH Télécom** (recommandé France)
+- **OVH Télécom** (recommended in France)
 - **Twilio** (international)
 - **Free SIP** (Freebox)
-- Tout opérateur SIP standard
+- Any standard SIP provider
 
 ---
 
-## 📁 Structure
+## 📁 Project structure
 
 ```
 open-medical-secretary/
-├── start.py          # Lanceur principal
-├── install.sh        # Installateur
-├── web.py            # Interface web Flask
-├── backend/          # Core IA (Pipecat, STT, TTS)
-├── telephony/        # Config Asterisk
+├── start.py          # Main launcher
+├── install.sh        # Installer
+├── web.py            # Flask web interface
+├── backend/          # AI core (Pipecat, STT, TTS)
+├── telephony/        # Asterisk configuration
 ├── web/              # Templates & assets
-└── data/             # Logs d'appels
+└── data/             # Call logs
 ```
 
 ---
 
-## 🛠️ Prérequis
+## 🛠️ Requirements
 
-- **macOS** ou **Linux**
+- **macOS** or **Linux**
 - **Python 3.10+**
-- **Ollama** (installé automatiquement)
-- **Docker** (optionnel, pour Asterisk)
+- **Ollama** (installed automatically)
+- **Docker** (optional, for Asterisk)
 
 ---
 
-## 📞 Téléphonie (optionnel)
+## 📞 Telephony (optional)
 
-Pour connecter votre numéro de téléphone :
+To connect your phone number:
 
 ```bash
 cd telephony
@@ -100,6 +100,6 @@ docker-compose up -d
 
 ---
 
-## 📄 Licence
+## 📄 License
 
-MIT License - Projet open source
+MIT License - Open source project
