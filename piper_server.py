@@ -95,15 +95,20 @@ class PiperServer:
         # Create WAV in memory
         buffer = io.BytesIO()
         
+        # Collect all audio chunks
+        audio_data = b''
+        sample_rate = 22050  # Default, will be updated from first chunk
+        
+        for chunk in self.voice.synthesize(text):
+            audio_data += chunk.audio_int16_bytes
+            sample_rate = chunk.sample_rate
+        
+        # Write WAV file
         with wave.open(buffer, "wb") as wav_file:
             wav_file.setnchannels(1)
             wav_file.setsampwidth(2)  # 16-bit
-            wav_file.setframerate(self.voice.config.sample_rate)
-            
-            # Synthesize
-            audio = self.voice.synthesize_stream_raw(text)
-            for audio_chunk in audio:
-                wav_file.writeframes(audio_chunk)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(audio_data)
         
         return buffer.getvalue()
 
@@ -126,10 +131,10 @@ async def main():
     runner = web.AppRunner(app)
     await runner.setup()
     
-    site = web.TCPSite(runner, "0.0.0.0", 5000)
+    site = web.TCPSite(runner, "0.0.0.0", 5555)
     await site.start()
     
-    logger.info("Piper TTS server running on http://0.0.0.0:5000")
+    logger.info("Piper TTS server running on http://0.0.0.0:5555")
     logger.info("POST /synthesize with JSON body: {\"text\": \"Hello world\"}")
     
     # Keep running

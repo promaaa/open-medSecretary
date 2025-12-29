@@ -91,7 +91,7 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:8b")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
 # Piper TTS settings
-PIPER_BASE_URL = os.getenv("PIPER_BASE_URL", "http://localhost:5000/synthesize")
+PIPER_BASE_URL = os.getenv("PIPER_BASE_URL", "http://localhost:5555/synthesize")
 PIPER_SAMPLE_RATE = int(os.getenv("PIPER_SAMPLE_RATE", "22050"))
 
 
@@ -210,14 +210,14 @@ async def main():
 
         # Register event handlers
         @transport.event_handler("on_client_connected")
-        async def on_call_connected(call_uuid: str):
+        async def on_call_connected(transport, call_uuid: str):
             """Handle incoming call - say greeting."""
             logger.info(f"Call connected: {call_uuid}")
             # Queue the greeting message to be spoken
             await task.queue_frames([TTSSpeakFrame(text=GREETING_MESSAGE)])
 
         @transport.event_handler("on_client_disconnected")
-        async def on_call_disconnected(call_uuid: str):
+        async def on_call_disconnected(transport, call_uuid: str):
             """Handle call end."""
             logger.info(f"Call disconnected: {call_uuid}")
 
