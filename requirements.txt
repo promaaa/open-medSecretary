@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # Pipecat Framework with local AI plugins
-pipecat-ai[silero,whisper]>=0.0.99
+pipecat-ai[silero,whisper]
 
 # HTTP client for Piper TTS
 aiohttp>=3.9.0
