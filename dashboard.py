@@ -3,10 +3,12 @@
 🚀 Live Dashboard - Lance et monitore tout le pipeline
 
 Une seule commande pour tout lancer avec suivi en temps réel!
+Inclut la configuration téléphonie au premier lancement.
 
 Usage:
     python dashboard.py           # Lance le dashboard
     python dashboard.py --test    # Lance avec test automatique
+    python dashboard.py --setup   # Force la configuration téléphonie
 """
 
 import argparse
@@ -20,6 +22,7 @@ import threading
 import time
 from collections import deque
 from datetime import datetime
+from pathlib import Path
 
 # Rich for beautiful terminal UI
 try:
@@ -29,10 +32,11 @@ try:
     from rich.panel import Panel
     from rich.table import Table
     from rich.text import Text
+    from rich.prompt import Prompt, Confirm
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
-    print("Installing rich for better UI...")
+    print("Installation de l'interface graphique...")
     subprocess.run([sys.executable, "-m", "pip", "install", "rich", "-q"])
     from rich.console import Console
     from rich.layout import Layout
@@ -40,18 +44,161 @@ except ImportError:
     from rich.panel import Panel
     from rich.table import Table
     from rich.text import Text
+    from rich.prompt import Prompt, Confirm
 
 console = Console()
 
-# Global state
+# =============================================================================
+# TELEPHONY CONFIGURATION
+# =============================================================================
+
+def get_env_path() -> Path:
+    return Path(__file__).parent / ".env"
+
+
+def load_env() -> dict:
+    """Load environment variables from .env file."""
+    env = {}
+    env_path = get_env_path()
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                if "=" in line and not line.startswith("#"):
+                    key, value = line.strip().split("=", 1)
+                    env[key] = value
+    return env
+
+
+def save_env(config: dict):
+    """Save configuration to .env file."""
+    env_path = get_env_path()
+    existing = load_env()
+    existing.update(config)
+    
+    with open(env_path, "w") as f:
+        f.write("# Open Medical Secretary - Configuration\n")
+        f.write(f"# Généré le {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
+        for key, value in existing.items():
+            f.write(f"{key}={value}\n")
+
+
+def is_telephony_configured() -> bool:
+    """Check if telephony is already configured."""
+    env = load_env()
+    return bool(env.get("SIP_USERNAME") and env.get("SIP_PASSWORD"))
+
+
+def check_docker_running() -> bool:
+    """Check if Docker is available."""
+    try:
+        result = subprocess.run(["docker", "info"], capture_output=True, timeout=5)
+        return result.returncode == 0
+    except:
+        return False
+
+
+def is_asterisk_running() -> bool:
+    """Check if Asterisk container is running."""
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "--filter", "name=open-med-asterisk", "--format", "{{.Names}}"],
+            capture_output=True, text=True, timeout=5
+        )
+        return "open-med-asterisk" in result.stdout
+    except:
+        return False
+
+
+def setup_telephony_interactive():
+    """Interactive telephony setup."""
+    console.print("\n[bold cyan]📞 Configuration Téléphonie[/bold cyan]\n")
+    
+    console.print("Pour recevoir des appels, vous devez connecter un numéro de téléphone.")
+    console.print("Choisissez votre opérateur SIP:\n")
+    
+    console.print("  [1] OVH Télécom [dim](recommandé France)[/dim]")
+    console.print("  [2] Twilio [dim](international)[/dim]")
+    console.print("  [3] Free SIP [dim](Freebox)[/dim]")
+    console.print("  [4] Autre opérateur")
+    console.print("  [5] Passer [dim](configurer plus tard)[/dim]")
+    console.print()
+    
+    choice = Prompt.ask("Votre choix", choices=["1", "2", "3", "4", "5"], default="5")
+    
+    if choice == "5":
+        console.print("[yellow]Configuration téléphonie ignorée.[/yellow]")
+        console.print("Vous pouvez la faire plus tard avec: python setup_telephony.py\n")
+        return False
+    
+    providers = {
+        "1": ("OVH", "siptrunk.ovh.net", "https://www.ovhtelecom.fr/manager/"),
+        "2": ("Twilio", "", "https://console.twilio.com/"),
+        "3": ("Free", "freephonie.net", "https://subscribe.free.fr/login/"),
+        "4": ("Autre", "", ""),
+    }
+    
+    provider_name, default_server, help_url = providers[choice]
+    
+    console.print(f"\n[bold]Configuration {provider_name}[/bold]")
+    if help_url:
+        console.print(f"[dim]Aide: {help_url}[/dim]\n")
+    
+    if choice == "2":  # Twilio needs custom server
+        server = Prompt.ask("Serveur SIP (ex: xxxxx.pstn.twilio.com)")
+    elif choice == "4":  # Custom
+        server = Prompt.ask("Serveur SIP")
+    else:
+        server = default_server
+    
+    port = Prompt.ask("Port SIP", default="5060")
+    username = Prompt.ask("Identifiant SIP")
+    password = Prompt.ask("Mot de passe SIP", password=True)
+    
+    config = {
+        "SIP_SERVER": server,
+        "SIP_PORT": port,
+        "SIP_USERNAME": username,
+        "SIP_PASSWORD": password,
+    }
+    
+    save_env(config)
+    console.print("\n[green]✅ Configuration sauvegardée![/green]\n")
+    
+    return True
+
+
+def start_asterisk_docker():
+    """Start Asterisk Docker container."""
+    console.print("[dim]Démarrage d'Asterisk...[/dim]")
+    
+    result = subprocess.run(
+        ["docker-compose", "up", "-d", "asterisk"],
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).parent
+    )
+    
+    if result.returncode == 0:
+        console.print("[green]✅ Asterisk démarré[/green]")
+        return True
+    else:
+        console.print(f"[red]❌ Erreur Asterisk: {result.stderr}[/red]")
+        return False
+
+
+# =============================================================================
+# DASHBOARD STATE
+# =============================================================================
+
 class DashboardState:
     def __init__(self):
         self.services = {
-            "ollama": {"status": "⏳", "name": "Ollama LLM", "port": 11434},
-            "tts": {"status": "⏳", "name": "Coqui TTS", "port": 5555},
-            "main": {"status": "⏳", "name": "Voice Assistant", "port": 9001},
+            "asterisk": {"status": "⏳", "name": "📞 Asterisk PBX", "port": 5060},
+            "ollama": {"status": "⏳", "name": "🧠 Ollama LLM", "port": 11434},
+            "tts": {"status": "⏳", "name": "🔊 Coqui TTS", "port": 5555},
+            "main": {"status": "⏳", "name": "🤖 Assistant IA", "port": 9001},
         }
-        self.logs = deque(maxlen=20)
+        self.logs = deque(maxlen=15)
         self.stats = {
             "calls": 0,
             "transcriptions": 0,
@@ -60,13 +207,12 @@ class DashboardState:
         }
         self.processes = []
         self.running = True
-        self.last_activity = None
+        self.telephony_configured = False
         
     def log(self, message: str, level: str = "INFO"):
         timestamp = datetime.now().strftime("%H:%M:%S")
         color = {"INFO": "white", "OK": "green", "ERROR": "red", "WARN": "yellow"}.get(level, "white")
         self.logs.append(f"[{color}]{timestamp} [{level}] {message}[/{color}]")
-        self.last_activity = message
 
 state = DashboardState()
 
@@ -89,13 +235,17 @@ atexit.register(cleanup)
 def signal_handler(sig, frame):
     state.running = False
     cleanup()
+    sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
+# =============================================================================
+# SERVICE MANAGEMENT
+# =============================================================================
+
 def check_port(port: int) -> bool:
-    """Check if a port is open."""
     import socket
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -108,7 +258,6 @@ def check_port(port: int) -> bool:
 
 
 def check_ollama() -> bool:
-    """Check if Ollama is running."""
     import urllib.request
     try:
         urllib.request.urlopen("http://localhost:11434/api/tags", timeout=2)
@@ -117,8 +266,45 @@ def check_ollama() -> bool:
         return False
 
 
+async def start_asterisk():
+    """Start Asterisk if configured."""
+    if not state.telephony_configured:
+        state.services["asterisk"]["status"] = "⚪"
+        state.log("Téléphonie non configurée", "WARN")
+        return False
+    
+    if not check_docker_running():
+        state.services["asterisk"]["status"] = "❌"
+        state.log("Docker non disponible", "ERROR")
+        return False
+    
+    state.log("Démarrage Asterisk...")
+    
+    if is_asterisk_running():
+        state.services["asterisk"]["status"] = "✅"
+        state.log("Asterisk déjà actif", "OK")
+        return True
+    
+    # Start Asterisk
+    result = subprocess.run(
+        ["docker-compose", "up", "-d", "asterisk"],
+        capture_output=True,
+        cwd=Path(__file__).parent
+    )
+    
+    if result.returncode == 0:
+        await asyncio.sleep(3)
+        if is_asterisk_running():
+            state.services["asterisk"]["status"] = "✅"
+            state.log("Asterisk démarré", "OK")
+            return True
+    
+    state.services["asterisk"]["status"] = "❌"
+    state.log("Échec Asterisk", "ERROR")
+    return False
+
+
 async def start_ollama():
-    """Start Ollama service."""
     state.log("Vérification Ollama...")
     
     if check_ollama():
@@ -142,12 +328,11 @@ async def start_ollama():
             return True
     
     state.services["ollama"]["status"] = "❌"
-    state.log("Échec démarrage Ollama", "ERROR")
+    state.log("Échec Ollama", "ERROR")
     return False
 
 
 async def start_tts():
-    """Start Coqui TTS server."""
     state.log("Vérification TTS...")
     
     if check_port(5555):
@@ -155,27 +340,23 @@ async def start_tts():
         state.log("TTS déjà actif", "OK")
         return True
     
-    state.log("Démarrage TTS (chargement modèle ~10s)...")
+    state.log("Démarrage TTS (~10s)...")
     
     p = subprocess.Popen(
         [sys.executable, "coqui_server.py"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        cwd=os.path.dirname(os.path.abspath(__file__))
+        cwd=Path(__file__).parent
     )
     state.processes.append(p)
     
-    # Monitor TTS output
-    def monitor_tts():
+    def monitor():
         for line in p.stdout:
             line = line.decode().strip()
-            if "Model loaded" in line or "server running" in line:
-                state.log("TTS prêt", "OK")
-            elif "Synthesizing" in line:
+            if "Synthesizing" in line:
                 state.stats["responses"] += 1
-                state.log("TTS: Synthèse en cours...", "INFO")
     
-    threading.Thread(target=monitor_tts, daemon=True).start()
+    threading.Thread(target=monitor, daemon=True).start()
     
     for _ in range(30):
         await asyncio.sleep(1)
@@ -185,13 +366,12 @@ async def start_tts():
             return True
     
     state.services["tts"]["status"] = "❌"
-    state.log("Échec démarrage TTS", "ERROR")
+    state.log("Échec TTS", "ERROR")
     return False
 
 
 async def start_main():
-    """Start main voice assistant."""
-    state.log("Démarrage assistant vocal...")
+    state.log("Démarrage assistant...")
     
     if check_port(9001):
         state.services["main"]["status"] = "✅"
@@ -202,26 +382,20 @@ async def start_main():
         [sys.executable, "main.py"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        cwd=os.path.dirname(os.path.abspath(__file__))
+        cwd=Path(__file__).parent
     )
     state.processes.append(p)
     
-    # Monitor main output
-    def monitor_main():
+    def monitor():
         for line in p.stdout:
             line = line.decode().strip()
             if "connection from" in line.lower():
                 state.stats["calls"] += 1
-                state.log("📞 Nouvel appel!", "OK")
-            elif "transcri" in line.lower():
-                state.stats["transcriptions"] += 1
+                state.log("📞 Appel entrant!", "OK")
             elif "error" in line.lower():
                 state.stats["errors"] += 1
-                state.log(f"Erreur: {line[:50]}", "ERROR")
-            elif "Ready to receive" in line:
-                state.log("Assistant prêt!", "OK")
     
-    threading.Thread(target=monitor_main, daemon=True).start()
+    threading.Thread(target=monitor, daemon=True).start()
     
     for _ in range(15):
         await asyncio.sleep(1)
@@ -231,12 +405,15 @@ async def start_main():
             return True
     
     state.services["main"]["status"] = "❌"
-    state.log("Échec démarrage assistant", "ERROR")
+    state.log("Échec assistant", "ERROR")
     return False
 
 
+# =============================================================================
+# UI COMPONENTS
+# =============================================================================
+
 def create_services_table() -> Table:
-    """Create services status table."""
     table = Table(title="🔧 Services", box=None, padding=(0, 1))
     table.add_column("Service", style="cyan")
     table.add_column("Status")
@@ -249,30 +426,25 @@ def create_services_table() -> Table:
 
 
 def create_stats_table() -> Table:
-    """Create statistics table."""
-    table = Table(title="📊 Statistiques", box=None, padding=(0, 1))
-    table.add_column("Métrique", style="cyan")
-    table.add_column("Valeur", style="green")
+    table = Table(title="📊 Stats", box=None, padding=(0, 1))
+    table.add_column("", style="cyan")
+    table.add_column("", style="green")
     
     table.add_row("Appels", str(state.stats["calls"]))
-    table.add_row("Transcriptions", str(state.stats["transcriptions"]))
-    table.add_row("Réponses TTS", str(state.stats["responses"]))
+    table.add_row("Réponses", str(state.stats["responses"]))
     table.add_row("Erreurs", str(state.stats["errors"]))
     
     return table
 
 
 def create_logs_panel() -> Panel:
-    """Create logs panel."""
     logs_text = Text()
     for log in state.logs:
         logs_text.append(log + "\n", style=None)
-    
     return Panel(logs_text, title="📋 Logs", border_style="blue")
 
 
 def create_layout() -> Layout:
-    """Create the dashboard layout."""
     layout = Layout()
     
     layout.split_column(
@@ -294,103 +466,54 @@ def create_layout() -> Layout:
     layout["right"].update(create_logs_panel())
     
     # Header
-    header_text = Text()
-    header_text.append("🏥 ", style="bold")
-    header_text.append("Open Medical Secretary", style="bold cyan")
-    header_text.append(" - Dashboard Live", style="dim")
-    layout["header"].update(Panel(header_text, style="bold"))
+    header = Text()
+    header.append("🏥 ", style="bold")
+    header.append("Open Medical Secretary", style="bold cyan")
+    if state.telephony_configured:
+        header.append(" | 📞 Téléphonie active", style="green")
+    layout["header"].update(Panel(header, style="bold"))
     
     # Footer
-    all_ok = all(s["status"] == "✅" for s in state.services.values())
-    if all_ok:
-        footer_text = "✅ Prêt! Test: python tests/mock_audiosocket_client.py | Ctrl+C pour quitter"
+    core_ok = all(state.services[s]["status"] == "✅" for s in ["ollama", "tts", "main"])
+    if core_ok:
+        footer = "✅ Prêt! | Ctrl+C pour quitter"
+        if not state.telephony_configured:
+            footer += " | python setup_telephony.py pour configurer le téléphone"
     else:
-        footer_text = "⏳ Démarrage en cours..."
-    layout["footer"].update(Panel(footer_text, style="dim"))
+        footer = "⏳ Démarrage..."
+    layout["footer"].update(Panel(footer, style="dim"))
     
     return layout
 
 
-async def run_test():
-    """Run automated test."""
-    state.log("Lancement test automatique...")
-    await asyncio.sleep(2)
-    
-    # Create test audio
-    state.log("Création audio de test...")
-    result = subprocess.run(
-        [sys.executable, "-c", """
-import sys
-sys.path.insert(0, '.')
-from TTS.api import TTS
-import numpy as np
-import wave
-from scipy import signal
+# =============================================================================
+# MAIN
+# =============================================================================
 
-tts = TTS('tts_models/fr/css10/vits')
-wav = tts.tts("Bonjour, je voudrais prendre un rendez-vous.")
-audio = (np.array(wav) * 32767).astype(np.int16)
-resampled = signal.resample(audio, int(len(audio) * 8000 / 22050)).astype(np.int16)
-
-with wave.open('/tmp/dashboard_test.wav', 'wb') as f:
-    f.setnchannels(1)
-    f.setsampwidth(2)
-    f.setframerate(8000)
-    f.writeframes(resampled.tobytes())
-print("OK")
-"""],
-        capture_output=True,
-        cwd=os.path.dirname(os.path.abspath(__file__))
-    )
-    
-    if result.returncode == 0:
-        state.log("Audio de test créé", "OK")
-    else:
-        state.log("Échec création audio", "ERROR")
-        return
-    
-    # Run test client
-    state.log("Appel test en cours...")
-    result = subprocess.run(
-        [sys.executable, "tests/mock_audiosocket_client.py", "--audio-file", "/tmp/dashboard_test.wav"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        cwd=os.path.dirname(os.path.abspath(__file__))
-    )
-    
-    if "Saved" in result.stdout and "bytes" in result.stdout:
-        state.log("✅ Test réussi! Réponse reçue", "OK")
-        state.log("Écouter: afplay response.wav", "INFO")
-    else:
-        state.log("Test échoué", "ERROR")
-
-
-async def main(run_test_flag: bool = False):
-    """Main dashboard loop."""
-    
+async def main(run_test: bool = False, force_setup: bool = False):
     console.clear()
-    console.print("[bold cyan]🏥 Open Medical Secretary - Dashboard[/bold cyan]\n")
+    console.print("[bold cyan]🏥 Open Medical Secretary[/bold cyan]\n")
+    
+    # Check telephony configuration
+    state.telephony_configured = is_telephony_configured()
+    
+    if force_setup or not state.telephony_configured:
+        if not state.telephony_configured:
+            console.print("[yellow]⚠️ Téléphonie non configurée[/yellow]\n")
+        
+        if Confirm.ask("Configurer la téléphonie maintenant?", default=False):
+            setup_telephony_interactive()
+            state.telephony_configured = is_telephony_configured()
+    
     console.print("Démarrage des services...\n")
     
-    # Start services
+    # Start all services
+    await start_asterisk()
     await start_ollama()
     await start_tts()
     await start_main()
     
-    # Check all services
-    all_ok = all(s["status"] == "✅" for s in state.services.values())
-    
-    if not all_ok:
-        console.print("\n[red]❌ Certains services n'ont pas démarré.[/red]")
-        console.print("Vérifiez les logs ci-dessus.")
-        return
-    
-    state.log("🎉 Tous les services sont prêts!", "OK")
-    
-    # Start test if requested
-    if run_test_flag:
-        asyncio.create_task(run_test())
+    state.log("🎉 Initialisation terminée!", "OK")
     
     # Run live dashboard
     with Live(create_layout(), refresh_per_second=2, console=console) as live:
@@ -400,11 +523,12 @@ async def main(run_test_flag: bool = False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Dashboard Live")
+    parser = argparse.ArgumentParser(description="Dashboard Open Medical Secretary")
     parser.add_argument("--test", action="store_true", help="Lance un test automatique")
+    parser.add_argument("--setup", action="store_true", help="Force la configuration téléphonie")
     args = parser.parse_args()
     
     try:
-        asyncio.run(main(run_test_flag=args.test))
+        asyncio.run(main(run_test=args.test, force_setup=args.setup))
     except KeyboardInterrupt:
-        console.print("\n[yellow]Arrêt du dashboard...[/yellow]")
+        console.print("\n[yellow]Arrêt...[/yellow]")
